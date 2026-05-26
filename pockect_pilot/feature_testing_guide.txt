@@ -1,0 +1,97 @@
+========================================================================
+             POCKET PILOT - ADVANCED FEATURE TESTING GUIDE
+========================================================================
+
+This guide explains how to test the four advanced capstone features of 
+Pocket Pilot: Geolocation, SMS Syncing, Push Notifications, and AI Suggestions, 
+both on real devices and emulators/simulators.
+
+------------------------------------------------------------------------
+🛰️ 1. REAL-TIME GEOLOCATION (LIVE GPS TRACKER)
+------------------------------------------------------------------------
+The app integrates directly with native GPS hardware using 'geolocator'.
+
+HOW TO TEST:
+  1. Open the "Geospatial View" (Telemetry Radar dashboard).
+  2. Grant the location permission when prompted.
+  3. The screen will render a breathing neon satellite lock pulse.
+  4. Live metrics (Latitude, Longitude, Altitude, Accuracy) will update 
+     in real-time on your dashboard.
+  5. Tap "Check-in at Current GPS Spot" to log a physical check-in.
+
+EMULATOR / SIMULATOR TESTING:
+  * Android Emulator:
+    Click the "..." on the emulator sidebar -> Extended Controls -> Location.
+    Search for a location or pick a point on the map, click "Set Location", 
+    and the app will update instantly.
+  * iOS Simulator:
+    In the top menu bar, select: Features -> Location -> Choose "City Run",
+    "Freeway Ride", or enter "Custom Coordinates".
+
+------------------------------------------------------------------------
+💬 2. BANK SMS READER & SCANNER
+------------------------------------------------------------------------
+The app queries the native inbox using 'flutter_sms_inbox' and extracts 
+financial amounts and merchant names from transaction messages.
+
+HOW TO TEST:
+  1. Receive or send an SMS containing transactional keywords, e.g.:
+     - "Your account was deducted $15.49 for Netflix.com"
+     - "You have withdrawn $60.00 from ATM 42"
+  2. Tap the Sync Icon (🔄) on the Home Screen header.
+  3. The app will fetch the messages, parse the values, and prompt you 
+     to import withdrawals directly into your "Pocket Cash" balance.
+
+EMULATOR TESTING (Android):
+  Go to Extended Controls -> Phone -> SMS. Enter a mock sender, type 
+  one of the transaction messages above, click "Send Message", and sync 
+  inside the app.
+
+IOS SIMULATOR & NO-SMS FALLBACK:
+  Since simulators or iOS restrictions do not allow local inbox queries, 
+  we built a premium automatic fallback. If the SMS database is empty, 
+  the Subscription Radar automatically populates the UI with interactive 
+  mock subscriptions (Netflix, Adobe CC, Gold Gym) to allow complete testing.
+
+------------------------------------------------------------------------
+🔔 3. SMART DWELL PUSH NOTIFICATIONS
+------------------------------------------------------------------------
+The app monitors dwell times in commercial areas and prompts users to log 
+unrecorded expenses.
+
+HOW TO TEST:
+  1. Navigate to the Live Radar/Geospatial View.
+  2. Scroll down to the simulator section.
+  3. Tap the "Simulate Push Notification Reminder" button.
+  4. A premium glassmorphic in-app alert simulates a real-time dwell reminder:
+     "Pocket Pilot detected you dwelled at 'Starbucks' for 15 minutes. 
+      Did you spend money here?"
+  5. Tap "Log Expense" on the alert.
+  6. The app will automatically navigate to the "Add Expense" page, with all 
+     OCR fields (Merchant, Date, Category, and Cost) pre-filled!
+
+------------------------------------------------------------------------
+🧠 4. LIVE GEMINI AI SUGGESTIONS & TIME-TRAVEL
+------------------------------------------------------------------------
+The app is connected to a live production Google Gemini 2.5 Flash Lite API.
+
+HOW TO TEST:
+  A. DIRECT AI CHAT (AI PILOT TAB):
+     - Go to the "AI Pilot" tab.
+     - Type any query (e.g., "Review my budget spending").
+     - The app feeds your actual current balance, pocket money, and 
+       transaction histories into the system instructions. Gemini will 
+       respond with highly specific, personalized feedback in real-time.
+
+  B. AI FINANCIAL TIME-TRAVEL (STATS TAB):
+     - Go to the "Stats" tab -> Click the "AI Financial Time-Travel" card.
+     - Adjust the spending velocity slider and tap "Consult AI Pilot".
+     - The app runs a linear regression simulator on your cash velocity and 
+       calls Gemini to write a custom, structured 3-sentence action plan.
+
+  C. SUBSCRIPTION CANCELLATION SCRIPTS (RADAR VIEW):
+     - In Subscription Radar, tap any detected subscription (mock or real).
+     - Tap "Generate Cancellation Script".
+     - Gemini will dynamically write a formal email/SMS cancellation request 
+       addressed to that specific merchant.
+========================================================================

@@ -1,0 +1,62 @@
+POCKET PILOT - NEW CAPSTONE APP FEATURES & REQUIREMENTS MATRIX
+
+1. NEW APP FEATURES (FOR MOBILE USERS)
+--------------------------------------
+Feature 1: AI Financial Time-Travel (Predictive Forecasting)
+Concept: The AI projects what the user's bank account will look like in 6 months using linear regression on current spending velocity.
+
+Feature 2: Smart Lens Receipt Scanner
+Concept: Float a camera button using Google ML Kit. Snap a photo of a physical grocery receipt, automatically extract items, calculate totals, and log the expense.
+
+Feature 3: Subscription Radar & Auto-Culler
+Concept: The SMS parser hunts specifically for recurring identical monthly charges (Netflix, Gym) and lists them in a "Radar" tab. The AI proactively suggests canceling unused ones.
+
+Feature 4: Budget Gamification (Streaks & Badges)
+Concept: Reward positive behavior with visual Streaks (e.g., spending under budget 3 days in a row) and stylized Badges (e.g., "The Pocket Saver").
+
+Feature 5: Co-Pilot Shared Goals
+Concept: Allow users to link accounts and create a "Shared Vault Goal" with a friend (e.g., Trip to Japan). Dual-avatar progress bars fill up as both contribute.
+
+Feature 6: Geo-Spatial Expense Reminders (GPS Auto-Tracker)
+Concept: Background GPS tracking combined with Google Places API. If a user dwells at a commercial store for 10+ minutes and leaves without logging an expense, send a push notification: "Did you spend money here?"
+
+
+2. TECHNICAL REQUIREMENTS MATRIX (FEATURE TO REQUIREMENT)
+--------------------------------------
+[Feature Name] | [Core Technical Business Requirement] | [Frontend Requirement] | [Backend/Storage Requirement] | [Hardware/API Requirement]
+
+1. AI Time-Travel
+   - Core Req: System must project future net worth based on historical spending velocity.
+   - Frontend: Interactive forecast line chart extending into future months.
+   - Backend: Store chronological historical arrays of net velocity.
+   - Hardware/API: Backend Linear Regression algorithm or Gemini AI endpoint.
+
+2. Smart Lens Scanner
+   - Core Req: System must convert physical paper receipts into digital variable expenses.
+   - Frontend: Camera overlay UI with bounding boxes.
+   - Backend: Endpoint to accept raw JSON text arrays and map to categories.
+   - Hardware/API: Device Camera permissions; google_mlkit_text_recognition.
+
+3. Subscription Radar
+   - Core Req: System must identify and isolate recurring monthly billing cycles.
+   - Frontend: Dedicated "Radar" tab listing active subs with "Cancel" advisory buttons.
+   - Backend: Chron jobs to scan transaction histories for identical amounts every ~30 days.
+   - Hardware/API: Native SMS Reader Background access.
+
+4. Budget Gamification
+   - Core Req: System must reward users for positive financial behaviors.
+   - Frontend: Visual Streaks, animated Badges, celebratory pop-ups.
+   - Backend: Schema updates (streaks: int, unlocked_badges: array).
+   - Hardware/API: Local Push Notifications to warn if streak is breaking.
+
+5. Co-Pilot Goals
+   - Core Req: System must allow multiple users to contribute to a singular financial target.
+   - Frontend: "Invite Friend" UI; Dual-avatar progress bars.
+   - Backend: Relational DB linked tables bridging Users via a Goal_ID.
+   - Hardware/API: WebSocket realtime streams to update shared progress.
+
+6. Geo-Spatial Reminders
+   - Core Req: System must track user location in background to identify visits to commercial businesses.
+   - Frontend: Permission gate UI ("Always Allow Location").
+   - Backend: Local SQLite storage of "Dwell" logs to minimize data footprint.
+   - Hardware/API: geolocator, Background Isolates, Google Maps Places Reverse Geocoding API.

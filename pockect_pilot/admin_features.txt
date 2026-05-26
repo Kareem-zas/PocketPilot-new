@@ -1,0 +1,50 @@
+POCKET PILOT - ADMIN DASHBOARD FEATURES & ROLES
+
+1. ROLE-BASED ACCESS CONTROL (RBAC)
+-----------------------------------
+Tier 1: Super Admin
+- Permissions: Unrestricted access. Can view API keys, manage server billing, delete user accounts, and create admin accounts.
+- View Scope: Aggregated Data + Platform Architecture.
+
+Tier 2: Customer Support Specialist
+- Permissions: Can lookup users by email, check subscription tier, check last login, and trigger password resets.
+- Restriction: Cannot view total balance, specific expenses, or synced SMS messages.
+
+Tier 3: Data Analyst / Marketing
+- Permissions: Can only view Anonymized & Aggregated Data.
+- View Scope: Averages (e.g., "average savings rate"), usage stats. No PII visible.
+
+Tier 4: Compliance Officer
+- Permissions: Designed for GDPR/CCPA.
+- View Scope: Securely executes "Right to be Forgotten" hard-deletions. Audits login logs for fraud without seeing money.
+
+Tier 5: Financial Partner / Auditor
+- Permissions: Strictly Read-Only access.
+- View Scope: Macro-growth charts and total monetization revenue. Proprietary config is hidden.
+
+
+2. CORE DASHBOARD FEATURES
+-----------------------------------
+A. Global Command Center:
+- Total Active Users (DAU/MAU).
+- API Burn Rate: Live tracking of Gemini AI and Google ML Kit requests to protect billing.
+- System Health: Real-time crash reports and server latency.
+
+B. User Management Console:
+- Search via UUID, Username, or Email.
+- Suspend Account / Force Logout toggles.
+- Terms of Service / Privacy Policy Audit Logs.
+
+C. Advanced Platform Settings & Controls:
+- Dynamic Feature Flags: Master Kill-Switches to disable broken features globally without app updates.
+- AI Tuning Slider: Adjust Gemini AI from "Creative" to "Strict" instantly.
+- Rate Limiting Config: Cap how many AI chats a free user can send per day.
+- API Key Rotation Vault: Hot-swap Google Maps and Gemini API keys securely.
+
+D. AI Oversight:
+- Prompt Analytics: View grouped common questions securely without reading private chats.
+
+
+3. SECURITY PROTOCOLS
+-----------------------------------
+- Zero-Knowledge Architecture: Transactional rows must be encrypted. Admins must never be able to read "John Doe spent $14 at Starbucks".

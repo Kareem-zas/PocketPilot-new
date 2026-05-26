@@ -1,0 +1,24 @@
+# Flutter
+pockect_pilot/build/
+pockect_pilot/.dart_tool/
+pockect_pilot/.flutter-plugins
+pockect_pilot/.flutter-plugins-dependencies
+pockect_pilot/.packages
+pockect_pilot/.pub-cache/
+pockect_pilot/.pub/
+pockect_pilot/ios/Pods/
+pockect_pilot/android/.gradle/
+pockect_pilot/android/app/debug/
+pockect_pilot/android/app/profile/
+pockect_pilot/android/app/release/
+pockect_pilot/android/local.properties
+pockect_pilot/pubspec.lock
+
+# Backend
+backend/node_modules/
+backend/.env
+backend/*.log
+
+# General
+.DS_Store
+Thumbs.db
