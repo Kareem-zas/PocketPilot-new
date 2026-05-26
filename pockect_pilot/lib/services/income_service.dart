@@ -5,6 +5,7 @@ import 'token_service.dart';
 class IncomeService {
   static const String baseUrl = 'http://192.168.1.17:8000/api';
 
+  // ── Insert new income ─────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> insertIncome({
     required String source,
     required double amount,
@@ -32,14 +33,32 @@ class IncomeService {
     );
 
     final data = jsonDecode(response.body);
-
     if (response.statusCode != 201 && response.statusCode != 200) {
       throw Exception(data['message'] ?? 'Failed to add income');
     }
-
     return data;
   }
 
+  // ── Get all incomes (full list, not just current month) ───────────────────
+  static Future<List<dynamic>> getAllIncomes() async {
+    final token = await TokenService.getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/income'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(data['message'] ?? 'Failed to fetch incomes');
+    }
+    return data['data']?['incomes'] ?? [];
+  }
+
+  // ── Get income (current month details from dashboard) ─────────────────────
   static Future<List<dynamic>> getIncome() async {
     final token = await TokenService.getToken();
 
@@ -52,20 +71,88 @@ class IncomeService {
     );
 
     final data = jsonDecode(response.body);
-
     if (response.statusCode != 200) {
       throw Exception(data['message'] ?? 'Failed to fetch income');
     }
-
-    // 🔥 القراءة الصحيحة من Dashboard API
-    return data['data']
-            ?['summary']
-            ?['income']
-            ?['details'] ??
-        [];
+    return data['data']?['summary']?['income']?['details'] ?? [];
   }
 
-  // ✅ SYNC SMS INCOME
+  // ── Delete income ─────────────────────────────────────────────────────────
+  static Future<void> deleteIncome(String id) async {
+    final token = await TokenService.getToken();
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/income/$id'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['message'] ?? 'Failed to delete income');
+    }
+  }
+
+  // ── Toggle recurring income active/inactive ───────────────────────────────
+  static Future<Map<String, dynamic>> toggleActive(String id) async {
+    final token = await TokenService.getToken();
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/income/$id/toggle-active'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(data['message'] ?? 'Failed to toggle income');
+    }
+    return data['data']['income'];
+  }
+
+  // ── Pause a specific month (e.g. unpaid leave) ────────────────────────────
+  static Future<void> pauseMonth(String id, int year, int month) async {
+    final token = await TokenService.getToken();
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/income/$id/pause-month'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'year': year, 'month': month}),
+    );
+
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['message'] ?? 'Failed to pause month');
+    }
+  }
+
+  // ── Resume a previously paused month ─────────────────────────────────────
+  static Future<void> resumeMonth(String id, int year, int month) async {
+    final token = await TokenService.getToken();
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/income/$id/resume-month'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'year': year, 'month': month}),
+    );
+
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['message'] ?? 'Failed to resume month');
+    }
+  }
+
+  // ── Sync SMS income ───────────────────────────────────────────────────────
   static Future<int> syncSmsIncome(List<Map<String, dynamic>> transactions) async {
     final token = await TokenService.getToken();
 
@@ -95,3 +182,5 @@ class IncomeService {
     return data['data']['addedCount'] ?? 0;
   }
 }
+
+

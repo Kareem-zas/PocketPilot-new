@@ -34,12 +34,74 @@ const computeLifetimeBalance = async (userId, fixedItems) => {
   const objId = new mongoose.Types.ObjectId(userId);
   const now = new Date();
 
-  // 1. مجموع كل الدخل
-  const [incomeAgg] = await Income.aggregate([
-    { $match: { user: objId } },
+  // 1. مجموع الدخل غير المتكرر (one-time incomes)
+  const [onetimeAgg] = await Income.aggregate([
+    { $match: { user: objId, isRecurring: false } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
-  const totalIncome = incomeAgg?.total || 0;
+  const totalOneTime = onetimeAgg?.total || 0;
+
+  // 2. حساب الدخل المتكرر — كل دخل متكرر نحسب عدد دورات دفعه حتى الآن
+  const recurringIncomes = await Income.find({
+    user: objId,
+    isRecurring: true,
+  }).lean();
+
+  let totalRecurring = 0;
+  for (const inc of recurringIncomes) {
+    if (!inc.isActive && (!inc.pausedMonths || inc.pausedMonths.length === 0)) {
+      // Fully deactivated and never had any payments — skip
+      // (if it was active before and then deactivated, we count up to deactivation)
+      // For simplicity: if isActive=false, we still count all cycles that happened
+      // before any future months (the user deactivated it going forward)
+    }
+
+    const startDate = new Date(inc.date);
+    const pausedSet = new Set(
+      (inc.pausedMonths || []).map((p) => `${p.year}-${p.month}`)
+    );
+
+    let cycles = 0;
+
+    if (inc.frequency === "monthly") {
+      // Count each month from startDate to now
+      let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const nowMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      while (cursor <= nowMonth) {
+        const key = `${cursor.getFullYear()}-${cursor.getMonth() + 1}`;
+        if (!pausedSet.has(key)) {
+          cycles++;
+        }
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    } else if (inc.frequency === "quarterly") {
+      let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cursor <= now) {
+        const key = `${cursor.getFullYear()}-${cursor.getMonth() + 1}`;
+        if (!pausedSet.has(key)) cycles++;
+        cursor.setMonth(cursor.getMonth() + 3);
+      }
+    } else if (inc.frequency === "bi-annual") {
+      let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cursor <= now) {
+        const key = `${cursor.getFullYear()}-${cursor.getMonth() + 1}`;
+        if (!pausedSet.has(key)) cycles++;
+        cursor.setMonth(cursor.getMonth() + 6);
+      }
+    } else if (inc.frequency === "yearly") {
+      let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cursor <= now) {
+        const key = `${cursor.getFullYear()}-${cursor.getMonth() + 1}`;
+        if (!pausedSet.has(key)) cycles++;
+        cursor.setFullYear(cursor.getFullYear() + 1);
+      }
+    }
+
+    totalRecurring += cycles * inc.amount;
+  }
+
+  const totalIncome = totalOneTime + totalRecurring;
+
 
   // 2. مجموع كل المصاريف المتغيرة (excluding goal deposits)
   const [varAgg] = await VariableExpense.aggregate([

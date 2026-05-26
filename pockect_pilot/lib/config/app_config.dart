@@ -21,12 +21,12 @@ class AppConfig {
   // Keys injected at build time; fallback used for local dev only.
   static const String geminiChatKey = String.fromEnvironment(
     'GEMINI_CHAT_KEY',
-    defaultValue: '',
+    defaultValue: 'AIzaSyDIrdHVbgJxb5Q76pjqtgsCU4dLv7Ubu14',
   );
 
   static const String geminiReceiptKey = String.fromEnvironment(
     'GEMINI_RECEIPT_KEY',
-    defaultValue: '',
+    defaultValue: 'AIzaSyAw5GLhtNf5Ybl1XXgqhPpnmJSsycEHsFk',
   );
 
   // ─── Security ────────────────────────────────────────────────────────────

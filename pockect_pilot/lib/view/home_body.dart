@@ -602,12 +602,31 @@ class _HomeBodyState extends State<HomeBody>
               );
             }),
           const SizedBox(height: 25),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Income History",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Income History",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  final refresh = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const IncomeDashboardPage()),
+                  );
+                  if (refresh == true) loadDashboard();
+                },
+                child: const Text(
+                  "Manage →",
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           incomes.isEmpty

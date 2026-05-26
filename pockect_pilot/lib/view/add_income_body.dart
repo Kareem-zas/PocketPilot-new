@@ -234,27 +234,46 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
                             ],
                           ),
                           if (isRecurring)
-                            Row(
+                            Column(
                               children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () =>
-                                        setState(() => frequency = "monthly"),
-                                    child: _freqBox("MONTHLY",
-                                        frequency == "monthly"),
-                                  ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => setState(() => frequency = "monthly"),
+                                        child: _freqBox("MONTHLY", frequency == "monthly"),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => setState(() => frequency = "quarterly"),
+                                        child: _freqBox("QUARTERLY", frequency == "quarterly"),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () =>
-                                        setState(() => frequency = "yearly"),
-                                    child: _freqBox("YEARLY",
-                                        frequency == "yearly"),
-                                  ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => setState(() => frequency = "bi-annual"),
+                                        child: _freqBox("BI-ANNUAL", frequency == "bi-annual"),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => setState(() => frequency = "yearly"),
+                                        child: _freqBox("YEARLY", frequency == "yearly"),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            )
+                            ),
                         ],
                       ),
                     ),

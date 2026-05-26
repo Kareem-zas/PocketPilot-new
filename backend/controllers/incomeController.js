@@ -240,3 +240,94 @@ exports.syncSmsIncome = catchAsync(async (req, res, next) => {
     data: { addedCount },
   });
 });
+
+/* =========================
+   Toggle Active
+   (تفعيل / تعطيل الدخل المتكرر كلياً)
+========================= */
+exports.toggleActive = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid Income ID", 400));
+  }
+
+  const income = await Income.findOne({ _id: id, user: req.userId });
+  if (!income) return next(new AppError("Income entry not found", 404));
+  if (!income.isRecurring) return next(new AppError("Only recurring incomes can be toggled", 400));
+
+  income.isActive = !income.isActive;
+  await income.save();
+
+  res.status(200).json({
+    status: "success",
+    message: `Recurring income ${income.isActive ? "activated" : "deactivated"}`,
+    data: { income },
+  });
+});
+
+/* =========================
+   Pause a Specific Month
+   (إيقاف شهر معين — إجازة بدون راتب)
+========================= */
+exports.pauseMonth = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { year, month } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid Income ID", 400));
+  }
+  if (!year || !month) {
+    return next(new AppError("year and month are required", 400));
+  }
+
+  const income = await Income.findOne({ _id: id, user: req.userId });
+  if (!income) return next(new AppError("Income entry not found", 404));
+  if (!income.isRecurring) return next(new AppError("Only recurring incomes can have paused months", 400));
+
+  // Avoid duplicates
+  const alreadyPaused = income.pausedMonths.some(
+    (p) => p.year === Number(year) && p.month === Number(month)
+  );
+
+  if (!alreadyPaused) {
+    income.pausedMonths.push({ year: Number(year), month: Number(month) });
+    await income.save();
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: `Month ${month}/${year} paused for this income`,
+    data: { income },
+  });
+});
+
+/* =========================
+   Resume a Specific Month
+   (استعادة شهر كان موقوفاً)
+========================= */
+exports.resumeMonth = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { year, month } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid Income ID", 400));
+  }
+  if (!year || !month) {
+    return next(new AppError("year and month are required", 400));
+  }
+
+  const income = await Income.findOne({ _id: id, user: req.userId });
+  if (!income) return next(new AppError("Income entry not found", 404));
+
+  income.pausedMonths = income.pausedMonths.filter(
+    (p) => !(p.year === Number(year) && p.month === Number(month))
+  );
+  await income.save();
+
+  res.status(200).json({
+    status: "success",
+    message: `Month ${month}/${year} resumed for this income`,
+    data: { income },
+  });
+});

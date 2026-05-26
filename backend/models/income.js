@@ -33,10 +33,23 @@ const incomeSchema = new mongoose.Schema(
 
     frequency: {
       type: String,
-      enum: ["monthly", "yearly"],
+      enum: ["monthly", "quarterly", "bi-annual", "yearly"],
       required: function () {
         return this.isRecurring;
       },
+    },
+
+    // Whether this recurring income is currently active
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    // Specific months the user paused (e.g. unpaid leave)
+    // Each entry: { year: 2026, month: 3 }
+    pausedMonths: {
+      type: [{ year: Number, month: Number }],
+      default: [],
     },
 
     icon: {
@@ -48,7 +61,7 @@ const incomeSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    
+
     smsId: {
       type: String,
       unique: true,
