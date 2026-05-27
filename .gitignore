@@ -22,3 +22,6 @@ backend/*.log
 # General
 .DS_Store
 Thumbs.db
+
+# Ignore app configuration
+pocket_pilot/lib/config/app_config.dart
