@@ -6,6 +6,8 @@ const mongoSanitize = require("express-mongo-sanitize");
 const hpp = require("hpp");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
+const http = require("http");
+const { Server } = require("socket.io");
 
 // 
 const AppError = require("./utils/AppError");
@@ -26,6 +28,35 @@ const gamificationRoutes = require("./routes/gamificationRoutes");
 const cronService = require("./services/cronService");
 
 const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || (process.env.NODE_ENV === "production" ? false : "*"),
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+  }
+});
+
+io.on("connection", (socket) => {
+  console.log("⚡ A user connected to WebSocket:", socket.id);
+
+  socket.on("joinGoalRoom", (goalId) => {
+    socket.join(`goal_${goalId}`);
+    console.log(`Socket ${socket.id} joined room goal_${goalId}`);
+  });
+
+  socket.on("goalUpdated", (data) => {
+    // Broadcast to others in the same room
+    socket.to(`goal_${data.goalId}`).emit("goalUpdated", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+// Make io accessible to our router if needed
+app.set("io", io);
 
 /* =========================
    Database Connection & Cron Jobs
@@ -135,6 +166,6 @@ app.use(globalErrorHandler);
 ========================= */
 const PORT = process.env.PORT || 8000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

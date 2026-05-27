@@ -38,6 +38,11 @@ exports.registerUser = catchAsync(async (req, res, next) => {
     return next(new AppError("Please provide all required fields", 400));
   }
 
+  // Validate password length explicitly for a clear error message
+  if (password.length < 8) {
+    return next(new AppError("Password must be at least 8 characters", 400));
+  }
+
 
   const existingUser = await User.findOne({
     $or: [{ email: email }, { phone: phone }]

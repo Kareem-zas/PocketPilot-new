@@ -141,6 +141,11 @@ exports.addSavings = catchAsync(async (req, res, next) => {
     .populate("members", "fullName email")
     .populate("contributions.userId", "fullName email");
 
+  const io = req.app.get("io");
+  if (io) {
+    io.to(`goal_${goal._id}`).emit("goalUpdated", { goalId: goal._id.toString() });
+  }
+
   res.status(200).json({
     status: "success",
     data: { goal: populatedGoal },
@@ -288,6 +293,11 @@ exports.contributeToGoal = catchAsync(async (req, res, next) => {
     .populate("user", "fullName email")
     .populate("members", "fullName email")
     .populate("contributions.userId", "fullName email");
+
+  const io = req.app.get("io");
+  if (io) {
+    io.to(`goal_${goal._id}`).emit("goalUpdated", { goalId: goal._id.toString() });
+  }
 
   res.status(200).json({
     status: "success",
