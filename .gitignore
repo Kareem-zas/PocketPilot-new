@@ -24,4 +24,3 @@ backend/*.log
 Thumbs.db
 
 # Ignore app configuration
-pocket_pilot/lib/config/app_config.dart
