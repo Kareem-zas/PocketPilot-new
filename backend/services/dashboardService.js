@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Income = require("../models/income");
-const FixedExpense = require("../models/fixedExpenses");
+const Subscription = require("../models/Subscription");
 const VariableExpense = require("../models/variableExpenses");
 const Goal = require("../models/Goal");
 
@@ -8,21 +8,26 @@ const Goal = require("../models/Goal");
    Helper: حساب إجمالي المصاريف الثابتة لشهر بعينه
    monthIndex: 0 (Jan) to 11 (Dec)
 ===================================================== */
-const calculateFixedForMonth = (fixedItems, year, monthIndex) => {
+const calculateSubscriptionForMonth = (subscriptions, year, monthIndex) => {
   const startOfMonth = new Date(year, monthIndex, 1);
   const endOfMonth = new Date(year, monthIndex + 1, 1);
 
-  return fixedItems.reduce((total, item) => {
-    if (!item.isActive) return total;
-    // لم يبدأ بعد في هذا الشهر
-    if (new Date(item.startDate) >= endOfMonth) return total;
+  return subscriptions.reduce((total, sub) => {
+    if (!sub.isActive) return total;
+    if (new Date(sub.firstDetectedDate) >= endOfMonth) return total;
 
-    if (item.frequency === "yearly") {
-      const start = new Date(item.startDate);
-      // يُحسب فقط في شهر الاستحقاق كل سنة
+    if (sub.frequency === "yearly") {
+      const start = new Date(sub.firstDetectedDate);
       if (start.getMonth() !== monthIndex) return total;
+      return total + sub.amount;
+    } else if (sub.frequency === "monthly") {
+      return total + sub.amount;
+    } else if (sub.frequency === "bi-weekly") {
+      return total + (sub.amount * 2);
+    } else if (sub.frequency === "weekly") {
+      return total + (sub.amount * 4);
     }
-    return total + item.amount;
+    return total;
   }, 0);
 };
 
@@ -30,7 +35,7 @@ const calculateFixedForMonth = (fixedItems, year, monthIndex) => {
    Helper: الرصيد التراكمي من أول يوم حتى اللحظة
    (كل الدخل) - (كل متغير) - (كل ثابت محسوب بأثر رجعي)
 ===================================================== */
-const computeLifetimeBalance = async (userId, fixedItems) => {
+const computeLifetimeBalance = async (userId, subscriptions) => {
   const objId = new mongoose.Types.ObjectId(userId);
   const now = new Date();
 
@@ -125,20 +130,24 @@ const computeLifetimeBalance = async (userId, fixedItems) => {
 
   // 4. المصاريف الثابتة بأثر رجعي
   let totalFixed = 0;
-  fixedItems.forEach((item) => {
-    if (!item.isActive) return;
-    const start = new Date(item.startDate);
+  subscriptions.forEach((sub) => {
+    if (!sub.isActive) return;
+    const start = new Date(sub.firstDetectedDate);
     if (start >= now) return;
 
     const monthsDiff =
       (now.getFullYear() - start.getFullYear()) * 12 +
       (now.getMonth() - start.getMonth());
 
-    if (item.frequency === "yearly") {
+    if (sub.frequency === "yearly") {
       const yearsDiff = Math.floor(monthsDiff / 12) + 1;
-      totalFixed += yearsDiff * item.amount;
-    } else {
-      totalFixed += (monthsDiff + 1) * item.amount;
+      totalFixed += yearsDiff * sub.amount;
+    } else if (sub.frequency === "monthly") {
+      totalFixed += (monthsDiff + 1) * sub.amount;
+    } else if (sub.frequency === "bi-weekly") {
+      totalFixed += (monthsDiff + 1) * 2 * sub.amount;
+    } else if (sub.frequency === "weekly") {
+      totalFixed += (monthsDiff + 1) * 4 * sub.amount;
     }
   });
 
@@ -162,7 +171,7 @@ exports.getDashboardData = async (userId, year, month, page = 1, pageSize = 10) 
     incomeAgg,
     variableAgg,
     variableCatAgg,
-    fixedDoc,
+    subscriptionsDocs,
     recentIncomeDocs,
     recentVariableDocs,
   ] = await Promise.all([
@@ -219,8 +228,8 @@ exports.getDashboardData = async (userId, year, month, page = 1, pageSize = 10) 
       { $sort: { total: -1 } },
     ]),
 
-    // المصاريف الثابتة
-    FixedExpense.findOne({ user: userId }).lean(),
+    // الاشتراكات الثابتة
+    Subscription.find({ user: userId }).lean(),
 
     // آخر إدخالات الدخل
     Income.find({ user: userId, date: { $gte: startDate, $lt: endDate } })
@@ -241,19 +250,19 @@ exports.getDashboardData = async (userId, year, month, page = 1, pageSize = 10) 
   ]);
 
   // ── حسابات ─────────────────────────────────────────────────────────────
-  const fixedItems = fixedDoc?.items || [];
+  const subscriptions = subscriptionsDocs || [];
 
   const monthlyIncome = incomeAgg[0]?.total || 0;
   const monthlySalary = incomeAgg[0]?.salary || 0;
   const monthlySideIncome = monthlyIncome - monthlySalary;
 
   const monthlyVariable = variableAgg[0]?.total || 0;
-  const monthlyFixed = calculateFixedForMonth(fixedItems, currentYear, currentMonth - 1);
+  const monthlyFixed = calculateSubscriptionForMonth(subscriptions, currentYear, currentMonth - 1);
   const monthlyExpenses = monthlyFixed + monthlyVariable;
   const monthlyNet = monthlyIncome - monthlyExpenses;
 
   // ── الرصيد التراكمي ─────────────────────────────────────────────────
-  const lifetimeBalance = await computeLifetimeBalance(userId, fixedItems);
+  const lifetimeBalance = await computeLifetimeBalance(userId, subscriptions);
 
   // ── آخر الحركات (الدخل + المتغير مدمجان ومرتبان) ───────────────────
   let recent = [
@@ -277,12 +286,12 @@ exports.getDashboardData = async (userId, year, month, page = 1, pageSize = 10) 
   recent.sort((a, b) => new Date(b.date) - new Date(a.date));
   recent = recent.slice(0, pageSize);
 
-  // ── Active Fixed Items لهذا الشهر ───────────────────────────────────
-  const activeFixedItems = fixedItems.filter((item) => {
-    if (!item.isActive) return false;
-    if (new Date(item.startDate) >= endDate) return false;
-    if (item.frequency === "yearly") {
-      return new Date(item.startDate).getMonth() === currentMonth - 1;
+  // ── Active Subscription Items لهذا الشهر ───────────────────────────────────
+  const activeSubscriptions = subscriptions.filter((sub) => {
+    if (!sub.isActive) return false;
+    if (new Date(sub.firstDetectedDate) >= endDate) return false;
+    if (sub.frequency === "yearly") {
+      return new Date(sub.firstDetectedDate).getMonth() === currentMonth - 1;
     }
     return true;
   });
@@ -306,7 +315,7 @@ exports.getDashboardData = async (userId, year, month, page = 1, pageSize = 10) 
         total: monthlyExpenses,
         fixed: {
           total: monthlyFixed,
-          details: activeFixedItems,
+          details: activeSubscriptions,
         },
         variable: {
           total: monthlyVariable,

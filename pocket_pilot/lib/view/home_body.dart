@@ -142,48 +142,36 @@ class _HomeBodyState extends State<HomeBody>
 
   Future<void> _syncSMS() async {
     try {
-      final msgs = await BankSmsService.fetchRecentBankMessages();
-      if (msgs.isNotEmpty && mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white),
-            title: const Text("Bank Messages Found"),
-            content: Text("Detected ${msgs.length} recent transactions. Process any ATM withdrawals into your Pocket Money?"),
-            actions: [
-               TextButton(onPressed:() => Navigator.pop(ctx), child: const Text("Cancel")),
-               ElevatedButton(
-                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                 onPressed: () async {
-                   double totalCashAdded = 0;
-                   for(var msg in msgs) {
-                      if(msg['type'] == 'expense' || msg['body'].toString().toLowerCase().contains('withdraw')) {
-                          totalCashAdded += msg['amount'];
-                      }
-                   }
-                   if (totalCashAdded <= 0) {
-                     if (!ctx.mounted) return;
-                     Navigator.pop(ctx);
-                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No valid withdrawals found in recent messages.")));
-                     return;
-                   }
-                   await PocketService.addPocketCash(totalCashAdded);
-                    if (!ctx.mounted) return;
-                    Navigator.pop(ctx);
-                    if (!mounted) return;
-                   loadDashboard();
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Transferred \$${totalCashAdded.toStringAsFixed(2)} to Pocket Cash!")));
-                 }, 
-                 child: const Text("Sync to Pocket", style: TextStyle(color: Colors.white))
-               )
-            ]
-          )
-        );
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No new bank messages.")));
-      }
-    } catch(e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white),
+          title: const Text("Syncing Smart SMS..."),
+          content: const Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Expanded(child: Text("Scanning and sending to Pocket Pilot AI...")),
+            ],
+          ),
+        ),
+      );
+
+      final count = await BankSmsService.syncRecentMessages();
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close dialog
+      
+      loadDashboard();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Successfully analyzed $count financial messages. Balances updated!")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close dialog
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
@@ -220,7 +208,19 @@ class _HomeBodyState extends State<HomeBody>
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.menu, color: Colors.blue),
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, color: Colors.blue),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AiNotificationsPage(),
+                    ),
+                  );
+                },
+                visualDensity: VisualDensity.compact,
+                tooltip: 'AI Notifications',
+              ),
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
@@ -237,20 +237,6 @@ class _HomeBodyState extends State<HomeBody>
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // AI Notifications bell
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined, color: Colors.blue),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AiNotificationsPage(),
-                        ),
-                      );
-                    },
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'AI Notifications',
-                  ),
                   IconButton(
                     icon: const Icon(Icons.sync_outlined, color: Colors.blue),
                     onPressed: _syncSMS,
@@ -796,8 +782,9 @@ class _HomeBodyState extends State<HomeBody>
 
   Widget _expenseItem(dynamic item) {
     final date = DateTime.tryParse(item['date'] ?? '');
+    final String itemId = item['_id'] ?? item['id'] ?? '';
 
-    return Container(
+    final childWidget = Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -837,6 +824,46 @@ class _HomeBodyState extends State<HomeBody>
           ),
         ],
       ),
+    );
+
+    if (itemId.isEmpty) return childWidget;
+
+    return Dismissible(
+      key: Key(itemId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (direction) async {
+        // MUST immediately remove from the list to prevent Dismissible crash
+        setState(() {
+          expenses.remove(item);
+        });
+        
+        try {
+          await VariableExpensesService.deleteExpense(itemId);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Expense deleted successfully')),
+          );
+          // Reload dashboard to reflect changes
+          loadDashboard();
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete expense: ${e.toString()}')),
+          );
+          loadDashboard(); // Refresh to bring it back
+        }
+      },
+      child: childWidget,
     );
   }
   Widget _goalContributionItem(Map<String, dynamic> item) {

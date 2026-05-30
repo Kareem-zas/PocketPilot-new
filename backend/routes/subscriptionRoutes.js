@@ -8,12 +8,13 @@ const router = express.Router();
 router.use(auth);
 
 router.route("/")
-  .get(subscriptionController.getSubscriptions);
+  .get(subscriptionController.getSubscriptions)
+  .post(subscriptionController.createSubscription);
 
 router.route("/rescan")
   .post(subscriptionController.rescan);
 
-router.route("/:id/cancel")
-  .patch(subscriptionController.cancelSubscription);
+router.route("/:id")
+  .patch(subscriptionController.toggleSubscription);
 
 module.exports = router;

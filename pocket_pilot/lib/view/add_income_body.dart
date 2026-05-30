@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pockect_pilot/services/income_service.dart';
 import 'package:pockect_pilot/view/home_page.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class AddIncomeBody extends StatefulWidget {
   const AddIncomeBody({super.key});
@@ -17,6 +18,18 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
   bool isRecurring = false;
   String? frequency;
   DateTime? selectedDate;
+  String _currencySymbol = '\$';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrency();
+  }
+
+  Future<void> _loadCurrency() async {
+    final symbol = await CurrencyService.getSymbol();
+    if (mounted) setState(() => _currencySymbol = symbol);
+  }
 
   @override
   void dispose() {
@@ -146,8 +159,7 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
                       _box(
                         Row(
                           children: [
-                            const Text("\$",
-                                style: TextStyle(color: Colors.blue)),
+                            Text(_currencySymbol, style: const TextStyle(color: Colors.blue)),
                             const SizedBox(width: 10),
                             Expanded(
                                 child: TextField(

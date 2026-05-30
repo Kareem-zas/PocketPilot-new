@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pockect_pilot/services/bank_sms_service.dart';
 import 'package:pockect_pilot/services/gemini_chat_service.dart';
 import 'package:pockect_pilot/services/gamification_service.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class SubscriptionRadarView extends StatefulWidget {
   const SubscriptionRadarView({super.key});
@@ -17,11 +18,18 @@ class _SubscriptionRadarViewState extends State<SubscriptionRadarView> {
   bool isGeneratingScript = false;
   String generatedScript = "";
   String activeSelectedSub = "";
+  String _currencySymbol = '\$';
 
   @override
   void initState() {
     super.initState();
     _scanSMSForSubscriptions();
+    _loadCurrency();
+  }
+
+  Future<void> _loadCurrency() async {
+    final symbol = await CurrencyService.getSymbol();
+    if (mounted) setState(() => _currencySymbol = symbol);
   }
 
   Future<void> _scanSMSForSubscriptions() async {
@@ -139,7 +147,7 @@ class _SubscriptionRadarViewState extends State<SubscriptionRadarView> {
 
     String systemContext = "You are an AI subscription assistant for Pocket Pilot. "
         "Your task is to draft a polite, yet firm, subscription cancellation email or live support negotiation script. "
-        "The user wants to cancel their subscription to '$subName' which costs \$$amount/month.";
+        "The user wants to cancel their subscription to '$subName' which costs $_currencySymbol$amount/month.";
 
     String prompt = "Create a premium cancellation email template that I can copy-paste. "
         "Include placeholders for name, account ID, and date. Keep it extremely clean, professional and brief.";
@@ -163,7 +171,7 @@ class _SubscriptionRadarViewState extends State<SubscriptionRadarView> {
         setState(() {
           generatedScript = "Subject: Request to Cancel Subscription for $subName\n\n"
               "Dear Customer Support Team,\n\n"
-              "I am writing to formally request the cancellation of my subscription to $subName (recurring charge: \$$amount/month), effective immediately.\n\n"
+              "I am writing to formally request the cancellation of my subscription to $subName (recurring charge: $_currencySymbol$amount/month), effective immediately.\n\n"
               "Please stop all recurring billings and confirm the receipt and processing of this cancellation.\n\n"
               "Best regards,\n[Your Name]";
           isGeneratingScript = false;
@@ -275,7 +283,7 @@ class _SubscriptionRadarViewState extends State<SubscriptionRadarView> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    "\$${sub['amount'].toStringAsFixed(2)}", 
+                                    "$_currencySymbol${sub['amount'].toStringAsFixed(2)}", 
                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                                   ),
                                   const SizedBox(height: 3),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pockect_pilot/services/goals_service.dart';
 import 'package:pockect_pilot/services/socket_service.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class SharedGoalsPage extends StatefulWidget {
   const SharedGoalsPage({super.key});
@@ -15,11 +16,13 @@ class _SharedGoalsPageState extends State<SharedGoalsPage> {
   bool _isLoading = true;
   String? _error;
   String? _expandedGoalId;
+  String _currencySymbol = '\$';
 
   @override
   void initState() {
     super.initState();
     _loadSharedGoals(showLoading: true);
+    _loadCurrency();
     
     // Connect to WebSocket
     SocketService.init();
@@ -35,6 +38,11 @@ class _SharedGoalsPageState extends State<SharedGoalsPage> {
     SocketService.offGoalUpdated();
     SocketService.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrency() async {
+    final symbol = await CurrencyService.getSymbol();
+    if (mounted) setState(() => _currencySymbol = symbol);
   }
 
   Future<void> _loadSharedGoals({required bool showLoading}) async {
@@ -463,11 +471,11 @@ class _SharedGoalsPageState extends State<SharedGoalsPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "\$${savedAmount.toStringAsFixed(2)} saved",
+                      "$_currencySymbol${savedAmount.toStringAsFixed(2)} saved",
                       style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     Text(
-                      "Target \$${targetAmount.toStringAsFixed(2)}",
+                      "Target $_currencySymbol${targetAmount.toStringAsFixed(2)}",
                       style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ],
@@ -652,7 +660,7 @@ class _SharedGoalsPageState extends State<SharedGoalsPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  "$fullName contributed \$${amount.toStringAsFixed(2)}",
+                  "$fullName contributed $_currencySymbol${amount.toStringAsFixed(2)}",
                   style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black87),
                 ),
               ),

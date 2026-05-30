@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pockect_pilot/services/gamification_service.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class GamificationView extends StatefulWidget {
   const GamificationView({super.key});
@@ -12,6 +13,9 @@ class _GamificationViewState extends State<GamificationView> {
   int streakDays = 0;
   int userXP = 0;
   int userLevel = 1;
+  double dailyLimit = 0.0;
+  double expensesToday = 0.0;
+  String _currencySymbol = '\$';
   List<BadgeModel> badges = [];
   bool loading = true;
 
@@ -26,6 +30,9 @@ class _GamificationViewState extends State<GamificationView> {
     final xp = await GamificationService.getXP();
     final lvl = await GamificationService.getLevel();
     final list = await GamificationService.getBadges();
+    final dLimit = await GamificationService.getDailyLimit();
+    final dExpenses = await GamificationService.getExpensesToday();
+    final symbol = await CurrencyService.getSymbol();
 
     if (mounted) {
       setState(() {
@@ -33,6 +40,9 @@ class _GamificationViewState extends State<GamificationView> {
         userXP = xp;
         userLevel = lvl;
         badges = list;
+        dailyLimit = dLimit;
+        expensesToday = dExpenses;
+        _currencySymbol = symbol;
         loading = false;
       });
     }
@@ -151,6 +161,48 @@ class _GamificationViewState extends State<GamificationView> {
                         Text("$streakDays Day Budget Streak 🔥", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? Colors.white : Colors.black87)),
                         const SizedBox(height: 3),
                         Text("Keep spending below budget tomorrow to keep it going!", style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            // Daily Limit Tracker Widget
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: expensesToday > dailyLimit ? Colors.red.withValues(alpha: 0.5) : (isDark ? Colors.blue.withValues(alpha: 0.2) : Colors.blue.shade100), width: 1),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: expensesToday > dailyLimit ? Colors.red.withValues(alpha: 0.15) : (isDark ? Colors.blue.withValues(alpha: 0.15) : Colors.blue.shade50),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(expensesToday > dailyLimit ? Icons.warning_amber_rounded : Icons.track_changes, color: expensesToday > dailyLimit ? Colors.redAccent : Colors.blue, size: 28),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Daily Limit Tracker", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white : Colors.black87)),
+                        const SizedBox(height: 3),
+                        Text(
+                          expensesToday > dailyLimit 
+                            ? "You've exceeded today's limit by $_currencySymbol${(expensesToday - dailyLimit).toStringAsFixed(2)}. Streak broken!"
+                            : "Spent $_currencySymbol${expensesToday.toStringAsFixed(2)} of $_currencySymbol${dailyLimit.toStringAsFixed(2)} limit today. You're safe!", 
+                          style: TextStyle(
+                            color: expensesToday > dailyLimit ? Colors.redAccent : (isDark ? Colors.grey.shade400 : Colors.grey), 
+                            fontSize: 11
+                          ),
+                        ),
                       ],
                     ),
                   ),

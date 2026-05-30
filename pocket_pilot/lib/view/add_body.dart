@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:pockect_pilot/services/variable_expenses_service.dart';
 import 'package:pockect_pilot/services/gemini_receipt_service.dart';
 import 'package:pockect_pilot/services/pocket_service.dart';
@@ -29,6 +30,7 @@ class _AddBodyState extends State<AddBody> {
   String paymentMethod = "Card";
 
   bool _handledOnce = false;
+  bool isSaving = false;
 
   @override
   void didChangeDependencies() {
@@ -259,6 +261,9 @@ class _AddBodyState extends State<AddBody> {
 
           GestureDetector(
             onTap: () async {
+              if (isSaving) return;
+              setState(() => isSaving = true);
+
               final title = itemNameController.text.trim();
               final amount = double.tryParse(priceController.text.trim());
               final category = categoryController.text.trim();
@@ -269,6 +274,10 @@ class _AddBodyState extends State<AddBody> {
                   amount == null ||
                   category.isEmpty ||
                   dateText.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please fill all required fields (Name, Amount, Category, Date)")),
+                );
+                setState(() => isSaving = false);
                 return;
               }
 
@@ -277,10 +286,28 @@ class _AddBodyState extends State<AddBody> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Invalid date format.")),
                 );
+                setState(() => isSaving = false);
                 return;
               }
 
               try {
+                double lat = 0.0;
+                double lng = 0.0;
+                try {
+                  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                  if (serviceEnabled) {
+                    LocationPermission permission = await Geolocator.checkPermission();
+                    if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+                       Position position = await Geolocator.getCurrentPosition(
+                         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+                       );
+                       lat = position.latitude;
+                       lng = position.longitude;
+                    }
+                  }
+                } catch (_) {}
+                String locationNote = lat != 0.0 ? " Location: $lat,$lng" : "";
+
                 if (paymentMethod == "Cash") {
                   await PocketService.subtractPocketCash(amount);
                   // We also add it to variable expenses for history tracking, maybe with a note
@@ -289,7 +316,7 @@ class _AddBodyState extends State<AddBody> {
                     amount: amount,
                     category: category,
                     date: parsedDate,
-                    notes: (notes.isEmpty ? "Paid in Cash" : "$notes (Cash)"),
+                    notes: (notes.isEmpty ? "Paid in Cash" : "$notes (Cash)") + locationNote,
                   );
                 } else {
                   await VariableExpensesService.addExpense(
@@ -297,7 +324,7 @@ class _AddBodyState extends State<AddBody> {
                     amount: amount,
                     category: category,
                     date: parsedDate,
-                    notes: notes.isEmpty ? null : notes,
+                    notes: (notes.isEmpty ? "Paid by Card" : notes) + locationNote,
                   );
                 }
 
@@ -312,6 +339,7 @@ class _AddBodyState extends State<AddBody> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("Error: ${e.toString()}")),
                 );
+                setState(() => isSaving = false);
               }
             },
             child: Container(
@@ -320,11 +348,13 @@ class _AddBodyState extends State<AddBody> {
                 color: Colors.blue,
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: const Center(
-                child: Text(
-                  "Save Expense",
-                  style: TextStyle(color: Colors.white),
-                ),
+              child: Center(
+                child: isSaving 
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text(
+                        "Save Expense",
+                        style: TextStyle(color: Colors.white),
+                      ),
               ),
             ),
           ),

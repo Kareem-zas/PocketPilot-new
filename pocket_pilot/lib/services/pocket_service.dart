@@ -1,10 +1,11 @@
+import 'package:pockect_pilot/config/app_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'token_service.dart';
 import 'package:flutter/foundation.dart';
 
 class PocketService {
-  static const String baseUrl = 'http://192.168.1.17:8000/api/pocket';
+  static const String baseUrl = '${AppConfig.baseUrl}/pocket';
 
   /// Fetch the current pocket cash balance from the backend
   static Future<double> getPocketBalance() async {

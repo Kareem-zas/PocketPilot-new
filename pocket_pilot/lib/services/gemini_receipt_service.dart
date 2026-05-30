@@ -2,45 +2,37 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:pockect_pilot/config/app_config.dart';
+import 'token_service.dart';
 
 class GeminiReceiptService {
-  static const String _apiKey = AppConfig.geminiReceiptKey;
-
   static Future<String> analyzeReceipt(File image) async {
     final bytes = await image.readAsBytes();
     final base64Image = base64Encode(bytes);
 
-    final uri = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1/models/'
-      'gemini-2.5-flash-lite:generateContent'
-      '?key=$_apiKey',
-    );
+    final token = await TokenService.getToken();
+    final uri = Uri.parse('${AppConfig.baseUrl}/ai/receipt');
 
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
       body: jsonEncode({
-        "contents": [
-          {
-            "role": "user",
-            "parts": [
-              {"text": _prompt},
-              {
-                "inline_data": {"mime_type": "image/jpeg", "data": base64Image},
-              },
-            ],
-          },
-        ],
+        "imageBase64": base64Image,
+        "prompt": _prompt,
       }),
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Gemini error ${response.statusCode}: ${response.body}');
+      throw Exception('Backend AI error ${response.statusCode}: ${response.body}');
     }
 
     final decoded = jsonDecode(response.body);
-
-    return decoded['candidates'][0]['content']['parts'][0]['text'];
+    
+    // The backend returns { status: 'success', data: { ... } }
+    // We should stringify the data block since the caller expects a JSON string.
+    return jsonEncode(decoded['data']);
   }
 
   static const String _prompt = '''

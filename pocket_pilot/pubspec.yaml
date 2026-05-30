@@ -21,7 +21,7 @@ dependencies:
   flutter_sms_inbox: ^1.0.4
   permission_handler: ^11.3.1
   fl_chart: ^1.2.0
-  geolocator: ^11.0.0
+  geolocator: ^14.0.2
   flutter_secure_storage: ^9.2.2
   local_auth: ^2.3.0
   sqflite: ^2.3.3
@@ -33,12 +33,14 @@ dependencies:
   timezone: ^0.10.1
   flutter_timezone: ^5.0.2
   socket_io_client: ^3.1.4
+  flutter_native_splash: ^2.4.7
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  image: ^4.8.0
 
 flutter:
   uses-material-design: true
@@ -56,5 +58,12 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/pocket-pilot-logo.png"
+  image_path: "assets/images/PocketPilotLogoApp.png"
+  min_sdk_android: 21
 
+flutter_native_splash:
+  color: "#00367F"
+  image: "assets/images/splashScreenLogo.png"
+  android_12:
+    color: "#00367F"
+    image: "assets/images/splashScreenLogo.png"

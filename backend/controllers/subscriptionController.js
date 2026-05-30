@@ -37,7 +37,7 @@ exports.runDetection = async (userId) => {
         const olderTxn = vendorExpenses[i + 1];
 
         const daysDiff = Math.abs(newerTxn.date - olderTxn.date) / (1000 * 60 * 60 * 24);
-        
+
         // 10% tolerance
         const maxAmount = Math.max(newerTxn.amount, olderTxn.amount);
         const amountDiff = Math.abs(newerTxn.amount - olderTxn.amount);
@@ -55,7 +55,7 @@ exports.runDetection = async (userId) => {
       if (subscriptionDetected) {
         // Check if already tracked
         const existing = await Subscription.findOne({ user: userId, vendor: vendor });
-        
+
         if (!existing) {
           // Calculate next expected date (30 days from the last transaction we found)
           const nextExpected = new Date(lastTxnDate);
@@ -94,9 +94,9 @@ exports.rescan = catchAsync(async (req, res, next) => {
    GET ALL SUBSCRIPTIONS
 ========================= */
 exports.getSubscriptions = catchAsync(async (req, res, next) => {
-  const subscriptions = await Subscription.find({ 
+  const subscriptions = await Subscription.find({
     user: req.userId,
-    isActive: true 
+    // Return all subscriptions, even inactive ones, so the UI can toggle them back on
   }).sort({ nextExpectedDate: 1 });
 
   res.status(200).json({
@@ -108,12 +108,58 @@ exports.getSubscriptions = catchAsync(async (req, res, next) => {
 });
 
 /* =========================
-   CANCEL (STOP TRACKING) SUBSCRIPTION
+   CREATE SUBSCRIPTION (MANUAL)
 ========================= */
-exports.cancelSubscription = catchAsync(async (req, res, next) => {
+exports.createSubscription = catchAsync(async (req, res, next) => {
+  const { title, vendor, amount, frequency, startDate, isActive } = req.body;
+  
+  // Accept title or vendor (legacy client uses title)
+  const subVendor = vendor || title;
+  
+  if (!subVendor || !amount || !startDate) {
+    return next(new AppError("Please provide vendor, amount, and startDate", 400));
+  }
+
+  const start = new Date(startDate);
+  const nextExpected = new Date(start);
+  
+  const freq = (frequency || "monthly").toLowerCase();
+  if (freq === "weekly") {
+    nextExpected.setDate(nextExpected.getDate() + 7);
+  } else if (freq === "yearly") {
+    nextExpected.setFullYear(nextExpected.getFullYear() + 1);
+  } else {
+    // Default to monthly
+    nextExpected.setMonth(nextExpected.getMonth() + 1);
+  }
+
+  const newSub = await Subscription.create({
+    user: req.userId,
+    vendor: subVendor,
+    amount: amount,
+    frequency: freq,
+    firstDetectedDate: start,
+    nextExpectedDate: nextExpected,
+    isActive: isActive !== undefined ? isActive : true,
+  });
+
+  res.status(201).json({
+    status: "success",
+    data: {
+      subscription: newSub,
+    },
+  });
+});
+
+/* =========================
+   TOGGLE SUBSCRIPTION ACTIVITY
+========================= */
+exports.toggleSubscription = catchAsync(async (req, res, next) => {
+  const { isActive } = req.body;
+  
   const sub = await Subscription.findOneAndUpdate(
     { _id: req.params.id, user: req.userId },
-    { isActive: false },
+    { isActive: isActive },
     { new: true, runValidators: true }
   );
 
@@ -123,7 +169,7 @@ exports.cancelSubscription = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    message: "Subscription tracking stopped.",
+    message: "Subscription updated.",
     data: { subscription: sub },
   });
 });

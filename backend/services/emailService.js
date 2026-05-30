@@ -26,12 +26,12 @@ exports.sendOTP = async (toEmail, otp, type) => {
   }
 
   const isVerify = type === "verify";
-  const subject = isVerify 
-    ? "Verify Your Email - Pocket Pilot" 
+  const subject = isVerify
+    ? "Verify Your Email - Pocket Pilot"
     : "Reset Your Password - Pocket Pilot";
 
-  const actionText = isVerify 
-    ? "verify your email address" 
+  const actionText = isVerify
+    ? "verify your email address"
     : "reset your password";
 
   const htmlContent = `

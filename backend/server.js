@@ -16,7 +16,7 @@ const globalErrorHandler = require("./controllers/errorController");
 // Routes Imports
 const authRoutes = require("./routes/authRoutes");
 const incomeRoutes = require("./routes/incomeRoutes");
-const fixedExpensesRoutes = require("./routes/fixedExpensesRoutes");
+
 const variableExpensesRoutes = require("./routes/variableExpensesRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
@@ -25,6 +25,8 @@ const pocketRoutes = require("./routes/pocketRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const forecastRoutes = require("./routes/forecastRoutes");
 const gamificationRoutes = require("./routes/gamificationRoutes");
+const smsRoutes = require("./routes/smsRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 const cronService = require("./services/cronService");
 
 const app = express();
@@ -137,7 +139,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/income", incomeRoutes);
-app.use("/api/fixed-expenses", fixedExpensesRoutes);
+
 app.use("/api/variable-expenses", variableExpensesRoutes);
 app.use("/api/dashboard", dashboardRoutes); // 
 app.use("/api/reports", reportRoutes);
@@ -146,6 +148,8 @@ app.use("/api/pocket", pocketRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/forecast", forecastRoutes);
 app.use("/api/gamification", gamificationRoutes);
+app.use("/api/sms", smsRoutes);
+app.use("/api/ai", aiRoutes);
 
 /* =========================
    Error Handling
@@ -168,4 +172,4 @@ const PORT = process.env.PORT || 8000;
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-});
+}); 

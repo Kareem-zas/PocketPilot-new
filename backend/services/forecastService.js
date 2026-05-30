@@ -1,24 +1,31 @@
 const mongoose = require("mongoose");
 const Income = require("../models/income");
 const VariableExpense = require("../models/variableExpenses");
-const FixedExpense = require("../models/fixedExpenses");
+const Subscription = require("../models/Subscription");
 
-const calculateFixedForMonth = (fixedItems, year, monthIndex) => {
+const calculateSubscriptionForMonth = (subscriptions, year, monthIndex) => {
   const endOfMonth = new Date(year, monthIndex + 1, 1);
 
-  return fixedItems.reduce((total, item) => {
-    if (!item.isActive) return total;
-    if (new Date(item.startDate) >= endOfMonth) return total;
+  return subscriptions.reduce((total, sub) => {
+    if (!sub.isActive) return total;
+    if (new Date(sub.firstDetectedDate) >= endOfMonth) return total;
 
-    if (item.frequency === "yearly") {
-      const start = new Date(item.startDate);
+    if (sub.frequency === "yearly") {
+      const start = new Date(sub.firstDetectedDate);
       if (start.getMonth() !== monthIndex) return total;
+      return total + sub.amount;
+    } else if (sub.frequency === "monthly") {
+      return total + sub.amount;
+    } else if (sub.frequency === "bi-weekly") {
+      return total + (sub.amount * 2);
+    } else if (sub.frequency === "weekly") {
+      return total + (sub.amount * 4);
     }
-    return total + item.amount;
+    return total;
   }, 0);
 };
 
-const computeBalanceAtDate = async (userId, fixedItems, date) => {
+const computeBalanceAtDate = async (userId, subscriptions, date) => {
   const objId = new mongoose.Types.ObjectId(userId);
 
   const [incomeAgg] = await Income.aggregate([
@@ -34,20 +41,24 @@ const computeBalanceAtDate = async (userId, fixedItems, date) => {
   const totalVariable = varAgg?.total || 0;
 
   let totalFixed = 0;
-  fixedItems.forEach((item) => {
-    if (!item.isActive) return;
-    const start = new Date(item.startDate);
+  subscriptions.forEach((sub) => {
+    if (!sub.isActive) return;
+    const start = new Date(sub.firstDetectedDate);
     if (start >= date) return;
 
     const monthsDiff =
       (date.getFullYear() - start.getFullYear()) * 12 +
       (date.getMonth() - start.getMonth());
 
-    if (item.frequency === "yearly") {
+    if (sub.frequency === "yearly") {
       const yearsDiff = Math.floor(monthsDiff / 12) + 1;
-      totalFixed += yearsDiff * item.amount;
-    } else {
-      totalFixed += (monthsDiff + 1) * item.amount;
+      totalFixed += yearsDiff * sub.amount;
+    } else if (sub.frequency === "monthly") {
+      totalFixed += (monthsDiff + 1) * sub.amount;
+    } else if (sub.frequency === "bi-weekly") {
+      totalFixed += (monthsDiff + 1) * 2 * sub.amount;
+    } else if (sub.frequency === "weekly") {
+      totalFixed += (monthsDiff + 1) * 4 * sub.amount;
     }
   });
 
@@ -72,8 +83,8 @@ const linearRegression = (yValues) => {
 };
 
 exports.getForecast = async (userId) => {
-  const fixedDoc = await FixedExpense.findOne({ user: userId }).lean();
-  const fixedItems = fixedDoc?.items || [];
+  const subscriptionsDocs = await Subscription.find({ user: userId }).lean();
+  const subscriptions = subscriptionsDocs || [];
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -111,11 +122,11 @@ exports.getForecast = async (userId) => {
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
     const monthlyVar = varAgg?.total || 0;
-    const monthlyFixed = calculateFixedForMonth(fixedItems, year, monthIndex);
+    const monthlyFixed = calculateSubscriptionForMonth(subscriptions, year, monthIndex);
 
     const monthlyExp = monthlyVar + monthlyFixed;
     const netSavings = monthlyInc - monthlyExp;
-    const endBalance = await computeBalanceAtDate(userId, fixedItems, end);
+    const endBalance = await computeBalanceAtDate(userId, subscriptions, end);
 
     const monthStr = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
 

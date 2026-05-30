@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pockect_pilot/view/add_goal_page.dart';
 import 'package:pockect_pilot/services/goals_service.dart';
 import 'package:pockect_pilot/services/pocket_service.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class GoalsPage extends StatefulWidget {
   const GoalsPage({super.key});
@@ -18,11 +19,18 @@ class _GoalsPageState extends State<GoalsPage> {
   double _momentum = 0.0;
   double _overallProgress = 0.0;
   String? _error;
+  String _currencySymbol = '\$';
 
   @override
   void initState() {
     super.initState();
     _loadGoals();
+    _loadCurrency();
+  }
+
+  Future<void> _loadCurrency() async {
+    final symbol = await CurrencyService.getSymbol();
+    if (mounted) setState(() => _currencySymbol = symbol);
   }
 
   Future<void> _loadGoals() async {
@@ -89,10 +97,10 @@ class _GoalsPageState extends State<GoalsPage> {
                   controller: amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: "Contribution Amount (\$)",
-                    hintStyle: TextStyle(color: Colors.grey),
+                    hintText: "Contribution Amount ($_currencySymbol)",
+                    hintStyle: const TextStyle(color: Colors.grey),
                   ),
                 ),
               ),
@@ -248,8 +256,8 @@ class _GoalsPageState extends State<GoalsPage> {
                                     icon: iconData,
                                     progressValue: progress,
                                     progressText: "${(progress * 100).toStringAsFixed(0)}%",
-                                    savedAmount: "\$${current.toStringAsFixed(2)}",
-                                    targetAmount: "\$${target.toStringAsFixed(2)}",
+                                    savedAmount: "$_currencySymbol${current.toStringAsFixed(2)}",
+                                    targetAmount: "$_currencySymbol${target.toStringAsFixed(2)}",
                                     isShared: isShared,
                                     user1Progress: target > 0 ? (pilot1Progress / target) : 0.0,
                                     user2Progress: target > 0 ? (pilot2Progress / target) : 0.0,
@@ -306,7 +314,7 @@ class _GoalsPageState extends State<GoalsPage> {
           children: [
             const Text("TOTAL SAVINGS", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
             const SizedBox(height: 5),
-            Text("\$${_totalSavings.toStringAsFixed(2)}", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
+            Text("$_currencySymbol${_totalSavings.toStringAsFixed(2)}", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
           ],
         ),
         GestureDetector(
@@ -350,7 +358,7 @@ class _GoalsPageState extends State<GoalsPage> {
                 children: [
                   const Text("Monthly Momentum", style: TextStyle(color: Colors.white70, fontSize: 12)),
                   const SizedBox(height: 5),
-                  Text("+\$${_momentum.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text("+$_currencySymbol${_momentum.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                 ],
               ),
               Container(
@@ -642,7 +650,7 @@ class _GoalsPageState extends State<GoalsPage> {
                 const SizedBox(height: 15),
                 Text("Next Milestone", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isDark ? Colors.white : Colors.black)),
                 const SizedBox(height: 5),
-                Text("Emergency Fund is \$2.7k from target", style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black54)),
+                Text("Emergency Fund is 2.7k from target", style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black54)),
               ],
             ),
           ),

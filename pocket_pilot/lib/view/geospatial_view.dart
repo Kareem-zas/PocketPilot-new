@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:pockect_pilot/services/geospatial_service.dart';
 import 'package:pockect_pilot/view/add_body.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class GeospatialView extends StatefulWidget {
   const GeospatialView({super.key});
@@ -15,6 +16,7 @@ class _GeospatialViewState extends State<GeospatialView> with SingleTickerProvid
   bool isTrackerEnabled = true;
   List<DwellLog> dwellLogs = [];
   bool loading = true;
+  String _currencySymbol = '\$';
   
   Position? currentPosition;
   bool isFetchingGPS = false;
@@ -28,6 +30,7 @@ class _GeospatialViewState extends State<GeospatialView> with SingleTickerProvid
   void initState() {
     super.initState();
     _loadGeoData();
+    _loadCurrency();
     
     _pulseController = AnimationController(
       vsync: this,
@@ -44,6 +47,11 @@ class _GeospatialViewState extends State<GeospatialView> with SingleTickerProvid
     gpsTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrency() async {
+    final symbol = await CurrencyService.getSymbol();
+    if (mounted) setState(() => _currencySymbol = symbol);
   }
 
   Future<void> _loadGeoData() async {
@@ -243,7 +251,7 @@ class _GeospatialViewState extends State<GeospatialView> with SingleTickerProvid
                 _loadGeoData();
               }
             },
-            child: Text("Quick Log \$${log.estimatedCost.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text("Quick Log $_currencySymbol${log.estimatedCost.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -530,7 +538,7 @@ class _GeospatialViewState extends State<GeospatialView> with SingleTickerProvid
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text("\$${log.estimatedCost.toStringAsFixed(2)}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87)),
+                          Text("$_currencySymbol${log.estimatedCost.toStringAsFixed(2)}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87)),
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

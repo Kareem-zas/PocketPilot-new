@@ -591,7 +591,7 @@ class _StatsPageState extends State<StatsPage> {
           bgColor: Colors.blue.shade50,
           title: cat.toUpperCase(),
           subtitle: "${counts[cat]} TRANSACTIONS",
-          amount: "\$${grouped[cat]!.toStringAsFixed(2)}",
+          amount: "$_currencySymbol${grouped[cat]!.toStringAsFixed(2)}",
           change: "...",
           changeColor: Colors.grey,
       );

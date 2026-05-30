@@ -1,24 +1,31 @@
 const mongoose = require("mongoose");
 const Income = require("../models/income");
-const FixedExpense = require("../models/fixedExpenses");
+const Subscription = require("../models/Subscription");
 const VariableExpense = require("../models/variableExpenses");
 
 /* =====================================================
    Helper: حساب المصاريف الثابتة لشهر بعينه
    monthIndex: 0 (Jan) → 11 (Dec)
 ===================================================== */
-const calculateFixedForMonth = (fixedItems, year, monthIndex) => {
+const calculateSubscriptionForMonth = (subscriptions, year, monthIndex) => {
   const endOfMonth = new Date(year, monthIndex + 1, 1);
 
-  return fixedItems.reduce((total, item) => {
-    if (!item.isActive) return total;
-    if (new Date(item.startDate) >= endOfMonth) return total;
+  return subscriptions.reduce((total, sub) => {
+    if (!sub.isActive) return total;
+    if (new Date(sub.firstDetectedDate) >= endOfMonth) return total;
 
-    if (item.frequency === "yearly") {
-      const start = new Date(item.startDate);
+    if (sub.frequency === "yearly") {
+      const start = new Date(sub.firstDetectedDate);
       if (start.getMonth() !== monthIndex) return total;
+      return total + sub.amount;
+    } else if (sub.frequency === "monthly") {
+      return total + sub.amount;
+    } else if (sub.frequency === "bi-weekly") {
+      return total + (sub.amount * 2);
+    } else if (sub.frequency === "weekly") {
+      return total + (sub.amount * 4);
     }
-    return total + item.amount;
+    return total;
   }, 0);
 };
 
@@ -30,7 +37,7 @@ exports.getMonthlyData = async (userId, year, month) => {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 1);
 
-  const [incomeAgg, variableAgg, variableByCat, fixedDoc, incomeDetails, variableDetails] =
+  const [incomeAgg, variableAgg, variableByCat, subscriptionsDocs, incomeDetails, variableDetails] =
     await Promise.all([
       // مجموع الدخل
       Income.aggregate([
@@ -71,8 +78,8 @@ exports.getMonthlyData = async (userId, year, month) => {
         { $sort: { total: -1 } },
       ]),
 
-      // المصاريف الثابتة
-      FixedExpense.findOne({ user: userId }).lean(),
+      // الاشتراكات الثابتة
+      Subscription.find({ user: userId }).lean(),
 
       // تفاصيل الدخل
       Income.find({ user: objId, date: { $gte: startDate, $lt: endDate } })
@@ -85,12 +92,12 @@ exports.getMonthlyData = async (userId, year, month) => {
         .lean(),
     ]);
 
-  const fixedItems = fixedDoc?.items || [];
+  const subscriptions = subscriptionsDocs || [];
   const totalIncome = incomeAgg[0]?.totalIncome || 0;
   const totalSalary = incomeAgg[0]?.totalSalary || 0;
   const totalSideIncome = totalIncome - totalSalary;
   const totalVariableExpenses = variableAgg[0]?.total || 0;
-  const totalFixedExpenses = calculateFixedForMonth(fixedItems, year, month - 1);
+  const totalFixedExpenses = calculateSubscriptionForMonth(subscriptions, year, month - 1);
   const totalExpenses = totalFixedExpenses + totalVariableExpenses;
 
   return {
@@ -129,7 +136,7 @@ exports.getYearlyData = async (userId, year) => {
   const startDate = new Date(year, 0, 1);
   const endDate = new Date(Number(year) + 1, 0, 1);
 
-  const [incomeAgg, variableAgg, variableByCat, fixedDoc] = await Promise.all([
+  const [incomeAgg, variableAgg, variableByCat, subscriptionsDocs] = await Promise.all([
     Income.aggregate([
       { $match: { user: objId, date: { $gte: startDate, $lt: endDate } } },
       {
@@ -167,15 +174,15 @@ exports.getYearlyData = async (userId, year) => {
       { $sort: { total: -1 } },
     ]),
 
-    FixedExpense.findOne({ user: userId }).lean(),
+    Subscription.find({ user: userId }).lean(),
   ]);
 
-  const fixedItems = fixedDoc?.items || [];
+  const subscriptions = subscriptionsDocs || [];
 
   // حساب الثابت لكل الـ 12 شهر
   let totalFixedExpenses = 0;
   for (let i = 0; i < 12; i++) {
-    totalFixedExpenses += calculateFixedForMonth(fixedItems, year, i);
+    totalFixedExpenses += calculateSubscriptionForMonth(subscriptions, year, i);
   }
 
   const totalIncome = incomeAgg[0]?.totalIncome || 0;
@@ -215,7 +222,7 @@ exports.getBreakdownData = async (userId, year) => {
   const startDate = new Date(year, 0, 1);
   const endDate = new Date(Number(year) + 1, 0, 1);
 
-  const [incomeByMonth, variableByMonth, fixedDoc] = await Promise.all([
+  const [incomeByMonth, variableByMonth, subscriptionsDocs] = await Promise.all([
     Income.aggregate([
       { $match: { user: objId, date: { $gte: startDate, $lt: endDate } } },
       {
@@ -248,10 +255,10 @@ exports.getBreakdownData = async (userId, year) => {
       },
     ]),
 
-    FixedExpense.findOne({ user: userId }).lean(),
+    Subscription.find({ user: userId }).lean(),
   ]);
 
-  const fixedItems = fixedDoc?.items || [];
+  const subscriptions = subscriptionsDocs || [];
 
   // بناء مصفوفة الـ 12 شهر
   const months = Array.from({ length: 12 }, (_, i) => {
@@ -265,7 +272,7 @@ exports.getBreakdownData = async (userId, year) => {
     const monthVarEntries = variableByMonth.filter((m) => m._id.month === monthIndex);
     const variable = monthVarEntries.reduce((sum, e) => sum + e.total, 0);
 
-    const fixed = calculateFixedForMonth(fixedItems, year, i);
+    const fixed = calculateSubscriptionForMonth(subscriptions, year, i);
     const totalExpenses = variable + fixed;
 
     return {

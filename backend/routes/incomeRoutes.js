@@ -44,4 +44,4 @@ router.patch("/:id", auth, updateIncome);
 // حذف
 router.delete("/:id", auth, deleteIncome);
 
-module.exports = router;
+module.exports = router;

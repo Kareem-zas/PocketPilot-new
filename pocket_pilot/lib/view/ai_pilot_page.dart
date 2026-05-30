@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pockect_pilot/services/gemini_chat_service.dart';
 import 'package:pockect_pilot/services/home_service.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 import 'dart:async';
 
 class AiPilotPage extends StatefulWidget {
@@ -49,9 +50,13 @@ class _AiPilotPageState extends State<AiPilotPage> {
       final exp = dashboard['variableExpenses'] ?? 0.0;
       final fix = dashboard['totalFixed'] ?? 0.0;
 
+      final currencyInfo = await CurrencyService.getCurrency();
+      final currencySymbol = currencyInfo.symbol;
+      final currencyName = currencyInfo.name;
+
       if (!mounted) return;
       setState(() {
-        systemContext = "The user has \$$bal in balance, \$$inc monthly income, \$$exp in variable expenses, and \$$fix in fixed expenses. Formulate advice around these numbers.";
+        systemContext = "The user's currency is $currencyName ($currencySymbol). They have $currencySymbol$bal in balance, $currencySymbol$inc monthly income, $currencySymbol$exp in variable expenses, and $currencySymbol$fix in fixed expenses. Always use the $currencyName symbol ($currencySymbol) when quoting amounts. Formulate advice around these numbers.";
       });
     } catch (_) {}
   }

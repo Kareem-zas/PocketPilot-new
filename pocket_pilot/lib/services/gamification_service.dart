@@ -1,3 +1,4 @@
+import 'package:pockect_pilot/config/app_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'token_service.dart';
@@ -28,7 +29,7 @@ class BadgeModel {
 }
 
 class GamificationService {
-  static const String baseUrl = 'http://192.168.1.17:8000/api/gamification';
+  static const String baseUrl = '${AppConfig.baseUrl}/gamification';
 
   static Future<Map<String, String>> _headers() async {
     final token = await TokenService.getToken();
@@ -82,8 +83,8 @@ class GamificationService {
 
   /// Returns the current streak day count.
   static Future<int> getStreak() async {
-    final data = await getStatus();
-    return (data['streak'] as num?)?.toInt() ?? 0;
+    final data = await checkStatus(); // ensures check happens
+    return (data['streakDays'] as num?)?.toInt() ?? (data['streak'] as num?)?.toInt() ?? 0;
   }
 
   /// Returns the current XP (experience points).
@@ -98,17 +99,39 @@ class GamificationService {
     return (data['level'] as num?)?.toInt() ?? 1;
   }
 
-  /// Returns all badges (locked and unlocked).
+  /// Returns the current daily budget limit.
+  static Future<double> getDailyLimit() async {
+    final data = await getStatus();
+    return (data['dailyBudget'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  /// Returns today's variable expenses.
+  static Future<double> getExpensesToday() async {
+    final data = await getStatus();
+    return (data['expensesToday'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  static const List<Map<String, dynamic>> _allBadgesDef = [
+    {'id': 'Pocket Saver', 'title': 'Pocket Saver', 'description': 'Maintained a 3-day budget streak.', 'iconName': 'savings'},
+    {'id': 'Budget Master', 'title': 'Budget Master', 'description': 'Maintained a 7-day budget streak.', 'iconName': 'timeline'},
+    {'id': 'Financial Ninja', 'title': 'Financial Ninja', 'description': 'Maintained a 30-day budget streak.', 'iconName': 'military_tech'},
+    {'id': 'No-Spend Hero', 'title': 'No-Spend Hero', 'description': 'Had zero variable expenses in a day.', 'iconName': 'radar'},
+    {'id': 'Smart Planner', 'title': 'Smart Planner', 'description': 'Created at least one active goal.', 'iconName': 'assignment'},
+    {'id': 'Subscription Hunter', 'title': 'Subscription Hunter', 'description': 'Logged an active subscription.', 'iconName': 'qr_code_scanner'},
+  ];
+
+  /// Returns all badges (locked and unlocked) by checking server's unlockedBadges array.
   static Future<List<BadgeModel>> getBadges() async {
     final data = await getStatus();
-    final rawBadges = data['badges'];
-    if (rawBadges is List) {
-      return rawBadges
-          .whereType<Map<String, dynamic>>()
-          .map(BadgeModel.fromJson)
-          .toList();
-    }
-    return [];
+    final unlockedList = (data['unlockedBadges'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    
+    return _allBadgesDef.map((b) => BadgeModel(
+      id: b['id'],
+      title: b['title'],
+      description: b['description'],
+      iconName: b['iconName'],
+      isUnlocked: unlockedList.contains(b['id']),
+    )).toList();
   }
 
   // ─── Mutation Methods (used by views) ─────────────────────────────────────
@@ -125,7 +148,7 @@ class GamificationService {
           )
           .timeout(const Duration(seconds: 10));
     } catch (_) {
-      // Fail silently — gamification is non-critical
+      // Fail silently
     }
   }
 
@@ -141,7 +164,7 @@ class GamificationService {
           )
           .timeout(const Duration(seconds: 10));
     } catch (_) {
-      // Fail silently — gamification is non-critical
+      // Fail silently
     }
   }
 }

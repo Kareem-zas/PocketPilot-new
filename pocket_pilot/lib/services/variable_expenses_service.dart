@@ -1,10 +1,11 @@
+import 'package:pockect_pilot/config/app_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class VariableExpensesService {
   static const String baseUrl =
-      'http://192.168.1.17:8000/api/variable-expenses';
+      '${AppConfig.baseUrl}/variable-expenses';
 
   // ✅ ADD EXPENSE (هذا اللي كان ناقص)
   static Future<void> addExpense({
@@ -48,7 +49,7 @@ class VariableExpensesService {
     if (year != null) query['year'] = year.toString();
     if (month != null) query['month'] = month.toString();
 
-    final uri = Uri.parse('http://192.168.1.17:8000/api/dashboard')
+    final uri = Uri.parse('${AppConfig.baseUrl}/dashboard')
         .replace(queryParameters: query);
 
     final response = await http.get(
@@ -96,5 +97,26 @@ class VariableExpensesService {
 
     final data = jsonDecode(response.body);
     return data['data']['addedCount'] ?? 0;
+  }
+
+  // ✅ DELETE EXPENSE
+  static Future<void> deleteExpense(String id) async {
+    final token = await TokenService.getToken();
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/$id'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      String msg = 'Failed to delete expense';
+      try {
+        final data = jsonDecode(response.body);
+        msg = data['message'] ?? msg;
+      } catch (_) {}
+      throw Exception(msg);
+    }
   }
 }

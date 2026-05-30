@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:pockect_pilot/services/gamification_service.dart';
 import 'package:pockect_pilot/services/home_service.dart';
 import 'package:pockect_pilot/services/gemini_chat_service.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class TimeTravelPage extends StatefulWidget {
   const TimeTravelPage({super.key});
@@ -23,13 +24,20 @@ class _TimeTravelPageState extends State<TimeTravelPage> {
   bool isCalculating = false;
   String aiRecommendation = "";
   bool loadingDashboard = true;
+  String _currencySymbol = '\$';
 
   @override
   void initState() {
     super.initState();
     _loadBalanceAndMetrics();
+    _loadCurrency();
     // Award Time Traveler Badge Structurally!
     GamificationService.unlockBadge('time_traveler');
+  }
+
+  Future<void> _loadCurrency() async {
+    final symbol = await CurrencyService.getSymbol();
+    if (mounted) setState(() => _currencySymbol = symbol);
   }
 
   Future<void> _loadBalanceAndMetrics() async {
@@ -89,13 +97,13 @@ class _TimeTravelPageState extends State<TimeTravelPage> {
 
     String velocityName = velocities[velocityIndex.toInt()];
 
-    String systemContext = "You are a professional financial planning AI. The user has an active bank balance of \$$currentBalance. "
-        "Their monthly income is \$$monthlyIncome, and their monthly expenses are \$$monthlyExpenses. "
-        "They have selected the '$velocityName' spending velocity, projecting a monthly spending velocity of \$${(monthlyExpenses * adjustedVelocity).toStringAsFixed(0)}. "
-        "This yields a net cash flow of \$${netVelocity.toStringAsFixed(0)} per month.";
+    String systemContext = "You are a professional financial planning AI. The user has an active bank balance of $_currencySymbol$currentBalance. "
+        "Their monthly income is $_currencySymbol$monthlyIncome, and their monthly expenses are $_currencySymbol$monthlyExpenses. "
+        "They have selected the '$velocityName' spending velocity, projecting a monthly spending velocity of $_currencySymbol${(monthlyExpenses * adjustedVelocity).toStringAsFixed(0)}. "
+        "This yields a net cash flow of $_currencySymbol${netVelocity.toStringAsFixed(0)} per month.";
 
     String prompt = "Consult on my 6-month time-travel forecast. Based on this spending velocity, "
-        "my balance is projected to reach \$${targetSixMonthBalance.toStringAsFixed(2)} in 6 months. "
+        "my balance is projected to reach $_currencySymbol${targetSixMonthBalance.toStringAsFixed(2)} in 6 months. "
         "Formulate a brief 3-sentence action plan (with bullet points) advising me on how to optimize this flight path.";
 
     try {
@@ -177,14 +185,14 @@ class _TimeTravelPageState extends State<TimeTravelPage> {
                   const Text("6-MONTH FORECAST RANGE", style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                   const SizedBox(height: 10),
                   Text(
-                    "\$${targetSixMonthBalance.toStringAsFixed(2)}",
+                    "$_currencySymbol${targetSixMonthBalance.toStringAsFixed(2)}",
                     style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     netVelocity >= 0 
-                      ? "Monthly Growth Velocity: +\$${netVelocity.toStringAsFixed(2)} 📈" 
-                      : "Monthly Deficit Velocity: -\$${netVelocity.abs().toStringAsFixed(2)} 📉",
+                      ? "Monthly Growth Velocity: +$_currencySymbol${netVelocity.toStringAsFixed(2)} 📈" 
+                      : "Monthly Deficit Velocity: -$_currencySymbol${netVelocity.abs().toStringAsFixed(2)} 📉",
                     style: TextStyle(
                       color: netVelocity >= 0 ? Colors.greenAccent : Colors.orangeAccent,
                       fontWeight: FontWeight.bold,

@@ -1,9 +1,10 @@
+import 'package:pockect_pilot/config/app_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class GoalsService {
-  static const String baseUrl = 'http://192.168.1.17:8000/api/goals';
+  static const String baseUrl = '${AppConfig.baseUrl}/goals';
 
   static Future<Map<String, String>> _headers() async {
     final token = await TokenService.getToken();

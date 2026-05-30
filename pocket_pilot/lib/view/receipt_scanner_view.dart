@@ -7,6 +7,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:pockect_pilot/services/gamification_service.dart';
 import 'package:pockect_pilot/services/variable_expenses_service.dart';
 import 'package:pockect_pilot/services/pocket_service.dart';
+import 'package:pockect_pilot/services/currency_service.dart';
 
 class ReceiptScannerView extends StatefulWidget {
   const ReceiptScannerView({super.key});
@@ -23,6 +24,7 @@ class _ReceiptScannerViewState extends State<ReceiptScannerView>
   bool showBoxes = false;
   bool isVerifying = false;
   String paymentMethod = "Card";
+  String _currencySymbol = '\$';
 
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
@@ -38,10 +40,17 @@ class _ReceiptScannerViewState extends State<ReceiptScannerView>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
+    _loadCurrency();
+
     // Launch camera automatically when the screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _pickAndScanImage();
     });
+  }
+
+  Future<void> _loadCurrency() async {
+    final symbol = await CurrencyService.getSymbol();
+    if (mounted) setState(() => _currencySymbol = symbol);
   }
 
   @override
@@ -460,7 +469,7 @@ class _ReceiptScannerViewState extends State<ReceiptScannerView>
               ),
               const SizedBox(width: 10),
               Text(
-                "\$${totalAmount.toStringAsFixed(2)}",
+                "$_currencySymbol${totalAmount.toStringAsFixed(2)}",
                 style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.w800, fontSize: 20),
               )
             ],
@@ -489,7 +498,7 @@ class _ReceiptScannerViewState extends State<ReceiptScannerView>
                           ],
                         ),
                       ),
-                      Text("\$${item['price'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text("$_currencySymbol${item['price'].toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                     ],
                   ),
                 );

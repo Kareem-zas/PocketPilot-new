@@ -1,9 +1,10 @@
+import 'package:pockect_pilot/config/app_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class FixedExpensesService {
-  static const String baseUrl = 'http://192.168.1.17:8000/api/fixed-expenses';
+  static const String baseUrl = '${AppConfig.baseUrl}/subscriptions';
 
   static Future<void> addFixedExpenseItem({
     required String title,
@@ -26,24 +27,11 @@ class FixedExpensesService {
       'Content-Type': 'application/json',
     };
 
-    var response = await http.post(
-      Uri.parse('$baseUrl/item'),
+    final response = await http.post(
+      Uri.parse(baseUrl),
       headers: headers,
       body: body,
     );
-
-    if (response.statusCode == 404) {
-      await http.post(
-        Uri.parse(baseUrl),
-        headers: headers,
-      );
-
-      response = await http.post(
-        Uri.parse('$baseUrl/item'),
-        headers: headers,
-        body: body,
-      );
-    }
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       String msg = 'Status ${response.statusCode}: Failed to add fixed expense';
@@ -73,7 +61,12 @@ class FixedExpensesService {
     }
 
     final data = jsonDecode(response.body);
-    return data['items'] ?? [];
+    final List<dynamic> items = data['data'] != null ? (data['data']['subscriptions'] ?? []) : [];
+    
+    return items.map((item) {
+      item['title'] = item['vendor'] ?? 'Unknown';
+      return item;
+    }).toList();
   }
 
   static Future<void> updateFixedExpenseActivity({
@@ -83,7 +76,7 @@ class FixedExpensesService {
     final token = await TokenService.getToken();
 
     final response = await http.patch(
-      Uri.parse('$baseUrl/item/$itemId'),
+      Uri.parse('$baseUrl/$itemId'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
